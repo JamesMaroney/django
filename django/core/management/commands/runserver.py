@@ -12,6 +12,7 @@ from django.core.servers.basehttp import (
 )
 from django.utils import autoreload
 from django.utils.encoding import force_text
+from django.http.request import validate_allowed_host
 
 
 naiveip_re = re.compile(r"""^(?:
@@ -70,8 +71,9 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         from django.conf import settings
 
-        if not settings.DEBUG and not settings.ALLOWED_HOSTS:
-            raise CommandError('You must set settings.ALLOWED_HOSTS if DEBUG is False.')
+        if not settings.DEBUG and not settings.ALLOWED_HOSTS and not validate_allowed_host.has_listeners():
+            raise CommandError('You must set settings.ALLOWED_HOSTS or attach a listener to '
+                               'django.http.request.validate_allowed_host if DEBUG is False.')
 
         self.use_ipv6 = options['use_ipv6']
         if self.use_ipv6 and not socket.has_ipv6:

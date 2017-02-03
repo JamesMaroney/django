@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.http.request import validate_allowed_host
 
 from .. import Tags, Warning, register
 
@@ -96,7 +97,8 @@ W019 = Warning(
 )
 
 W020 = Warning(
-    "ALLOWED_HOSTS must not be empty in deployment.",
+    "ALLOWED_HOSTS must not be empty and no listeners attached to "
+    "django.http.request.validate_allowed_host in deployment.",
     id='security.W020',
 )
 
@@ -207,4 +209,4 @@ def check_xframe_deny(app_configs, **kwargs):
 
 @register(Tags.security, deploy=True)
 def check_allowed_hosts(app_configs, **kwargs):
-    return [] if settings.ALLOWED_HOSTS else [W020]
+    return [] if settings.ALLOWED_HOSTS or validate_allowed_host.has_listeners() else [W020]
