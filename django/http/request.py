@@ -556,6 +556,9 @@ def validate_host(host, allowed_hosts):
 
     Return ``True`` for a valid host, ``False`` otherwise.
     """
+    if callable(allowed_hosts):
+        return allowed_hosts(host)
+
     for pattern in allowed_hosts:
         if pattern == '*' or is_same_domain(host, pattern):
             return True
