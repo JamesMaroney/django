@@ -14,6 +14,7 @@ from django.http.multipartparser import MultiPartParser, MultiPartParserError
 from django.utils.datastructures import ImmutableList, MultiValueDict
 from django.utils.encoding import escape_uri_path, force_bytes, iri_to_uri
 from django.utils.http import is_same_domain, limited_parse_qsl
+from django.dispatch import Signal
 
 RAISE_ERROR = object()
 host_validation_re = re.compile(r"^([a-z0-9.-]+|\[[a-f0-9]*:[a-f0-9\.:]+\])(:\d+)?$")
@@ -86,9 +87,10 @@ class HttpRequest:
         """Return the HTTP host using the environment or request headers."""
         host = self._get_raw_host()
 
-        # Allow variants of localhost if ALLOWED_HOSTS is empty and DEBUG=True.
+        # Allow variants of localhost if ALLOWED_HOSTS is empty, no validate_allowed_host signal listeners
+        #  are attached and DEBUG=True.
         allowed_hosts = settings.ALLOWED_HOSTS
-        if settings.DEBUG and not allowed_hosts:
+        if settings.DEBUG and not allowed_hosts and not validate_allowed_host.has_listeners():
             allowed_hosts = ['localhost', '127.0.0.1', '[::1]']
 
         domain, port = split_domain_port(host)
@@ -560,4 +562,14 @@ def validate_host(host, allowed_hosts):
         if pattern == '*' or is_same_domain(host, pattern):
             return True
 
-    return False
+    signal_responses = validate_allowed_host.send(
+        sender = None,
+        host = host
+    )
+
+    return any(
+        host_allowed for
+        function, host_allowed in signal_responses
+    )
+
+validate_allowed_host = Signal(providing_args=['host'])
